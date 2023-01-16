@@ -1,40 +1,29 @@
-const express = require('express');
-let axios = require('axios');
+const express = require("express");
+let axios = require("axios");
 var app = express();
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.post('/', function(req, res, next) {
+app.post("/", async function (req, res, next) {
   try {
-    const fetchGithubInfo = async (url) => {
-      console.log(`Fetching ${url}`)
-      const githubInfo = await axios(url)
-      return {
-        name: githubInfo.data.name,
-        bio: githubInfo.data.bio
-      }
-    }
-    
-    const fetchUserInfo = async (names) => {
-      const requests = names.map((name) => {
-        const url = `https://api.github.com/users/${name}`
-        return fetchGithubInfo(url)
-         .then((a) => {
-          return a 
-          })
-      })
-      return Promise.all(requests) 
-    }
-    
-    
-    return fetchUserInfo(req.body.developers)
-     .then(a => res.send(JSON.stringify(a)))
-    
-  } catch (err){
+    const developers = req.body.developers;
+    const promises = developers.map(async (dev) => {
+      return axios
+        .get(`https://api.github.com/users/${dev}`)
+        .catch("User not found");
+    });
+    const result = (await Promise.allSettled(promises)).filter(
+      (r) => r.status === "fulfilled"
+    );
+    return res.json(result.map((r) => r.value.data));
+  } catch (err) {
     return next(err);
   }
 });
 
-app.listen(3000, function() {
+//TODO: add error handling
+
+//TODO: listen separately
+app.listen(3000, function () {
   console.log(`Server starting on port 3000`);
 });
